@@ -12,7 +12,7 @@
   <a href="https://github.com/Guan-Pujun/bcmp-r/actions/workflows/package.yml"><img src="https://github.com/Guan-Pujun/bcmp-r/actions/workflows/package.yml/badge.svg?branch=main" alt="Build"></a>
   <a href="https://github.com/Guan-Pujun/bcmp-r/actions/workflows/docs.yml"><img src="https://github.com/Guan-Pujun/bcmp-r/actions/workflows/docs.yml/badge.svg?branch=main" alt="Documentation"></a>
   <br>
-  <a href="https://codecov.io/gh/Guan-Pujun/bcmp-r"><img src="https://codecov.io/gh/Guan-Pujun/bcmp-r/graph/badge.svg" alt="Codecov"></a>
+  <a href="https://codecov.io/github/Guan-Pujun/bcmp-r"><img src="https://codecov.io/github/Guan-Pujun/bcmp-r/graph/badge.svg?token=YO04KDP79U" alt="Codecov"></a>
   <a href="https://github.com/Guan-Pujun/bcmp-r/actions/workflows/R-CMD-check.yml"><img src="https://github.com/Guan-Pujun/bcmp-r/actions/workflows/R-CMD-check.yml/badge.svg?branch=main" alt="R CMD check"></a>
 </p>
 
