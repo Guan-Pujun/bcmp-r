@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Vignette — BCMP R</title><link rel="icon" type="image/png" sizes="32x32" href="assets/bcmp-favicon-32.png"><link rel="stylesheet" href="style.css?v=20260916-footnote-spacing"><script defer src="theme.js?v=20260823-signature-v3"></script></head>
+<body>
+<header class="topbar"><div class="shell"><div class="identity"><a class="brand" href="index.html">BCMP</a><span class="manual-current">R</span></div><nav class="nav" aria-label="Manual"><a href="index.html">Home</a><a href="method.html">Method</a><a href="installation.html">Installation</a><a href="api.html">API</a><a href="output.html">Output</a><a href="citation.html">Citation</a><a aria-current="page" href="vignette.html">Vignette</a></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode"><span class="theme-toggle__icon" aria-hidden="true">☾</span><span class="theme-toggle__label">Dark</span></button></div></header>
+<div class="manual-layout shell"><main class="prose">
+  <section class="page-heading"><h1 id="vignette">Vignette</h1><p>This vignette uses a Seurat object as an example to derive BCMP domains from an unintegrated single-cell dataset. It then uses these domains to rank candidate integration methods. <code>bcmp()</code> also supports SingleCellExperiment objects.</p></section>
+
+  <h3>Set up the environment</h3>
+  <p>This vignette uses the following additional R packages. If any are not installed, run:</p>
+  <pre><code><span class="tok-comment"># In R</span>
+install.packages(
+  c("Seurat", "ggplot2", "patchwork", "reticulate", "BiocManager"),
+  repos = "https://cloud.r-project.org"
+)
+BiocManager::install("anndataR")</code></pre>
+
+  <p>The Python environment is needed for ranking integration methods in step 3. To use <code>scib-metrics</code> from R, use <code>reticulate</code> to work with Python. If Conda is not installed, first install Miniconda following the <a href="https://www.anaconda.com/docs/getting-started/installation">official installation guide</a>. Run the following commands <strong>in a terminal</strong> to create the Python environment and install the required packages:</p>
+  <pre><code><span class="tok-comment"># In a terminal</span>
+conda create -n bcmp-scib python=3.12
+conda activate bcmp-scib
+python -m pip install "pandas&gt;=2.2.3,&lt;3" anndata scib-metrics</code></pre>
+
+  <h2 id="load-the-example-seurat-object">1. Load a Seurat object</h2>
+  <p>This bundled example Seurat object<sup><a id="dataset-source-ref" href="#dataset-source-note" role="doc-noteref" aria-label="Footnote 1: dataset source">1</a></sup> contains raw counts, <code>batch</code> metadata, and a precomputed UMAP.</p>
+  <pre><code><span class="tok-comment"># In R</span>
+library(bcmp)
+library(ggplot2)
+library(patchwork)
+
+seurat_path &lt;- system.file(
+  "extdata", "diabetic_kidney_lite_seurat.rds", package = "bcmp"
+)
+seurat &lt;- readRDS(seurat_path)
+seurat</code></pre>
+  <div class="vignette-output"><pre><code>An object of class Seurat
+27980 features across 1500 samples within 1 assay
+Active assay: RNA (27980 features, 0 variable features)
+ 1 layer present: counts
+ 12 dimensional reductions calculated: X_demo_umap, X_CSS, X_ComBat, X_Harmony,
+ X_LIGER, X_Scanorama, X_Seurat_cca, X_Seurat_rpca, X_Uncorrected, X_fastMNN,
+ X_scANVI, X_scVI</code></pre></div>
+
+  <h2 id="run-bcmp">2. Run BCMP and visualize domains</h2>
+  <h3>Run BCMP</h3>
+  <p>Simply run BCMP with the Seurat object and its batch key:</p>
+  <pre><code>r_result &lt;- bcmp(
+  seurat,
+  batch_key = "batch",
+  verbose = FALSE
+)
+
+colnames(r_result$object[[]])</code></pre>
+  <div class="vignette-output"><pre><code>[1] "orig.ident"   "nCount_RNA"   "nFeature_RNA" "batch"        "bcmp_domain"</code></pre></div>
+
+  <h3>Visualize domains</h3>
+  <pre><code>umap &lt;- as.data.frame(
+  SeuratObject::Embeddings(r_result$object[["X_demo_umap"]])
+)
+colnames(umap) &lt;- c("UMAP1", "UMAP2")
+
+plot_umap &lt;- function(labels, title, palette) {
+  ggplot(transform(umap, label = as.character(labels)), aes(UMAP1, UMAP2, colour = label)) +
+    geom_point() +
+    scale_colour_brewer(palette = palette) +
+    theme_void() + theme(legend.position = "bottom") +
+    labs(title = title, colour = NULL)
+}
+plot_umap(r_result$object$batch, "Batch", "Accent") +
+  plot_umap(r_result$object$bcmp_domain, "BCMP domain", "Paired")</code></pre>
+  <img class="vignette-figure" src="assets/vignette-umap.png?v=20260906-simple-points" data-theme-src-light="assets/vignette-umap.png?v=20260906-simple-points" data-theme-src-dark="assets/vignette-umap-dark.png?v=20260906-simple-points" alt="Precomputed UMAP shown by batch and R-derived BCMP domain">
+
+  <h2 id="rank-candidate-integrations">3. Rank candidate integration methods</h2>
+  <p>The eleven bundled candidate embeddings are stored as Seurat reductions. Their keys and display names are recorded in <code>seurat@misc$integration_benchmark</code>.</p>
+  <pre><code>benchmark &lt;- seurat@misc$integration_benchmark
+candidate_reductions &lt;- benchmark$embedding_keys
+method_names &lt;- benchmark$method_names</code></pre>
+  <h3>Prepare the scIB input</h3>
+  <p>Because <code>scib-metrics</code> requires a Python AnnData object, use <code>anndataR</code> and <code>reticulate</code> to convert the Seurat object directly in memory. See the <a href="https://anndatar.scverse.org/articles/anndataR.html">anndataR manual</a> for conversion details.</p>
+  <pre><code>reticulate::use_condaenv("bcmp-scib", required = TRUE)
+
+reduction_mapping &lt;- stats::setNames(
+  as.list(candidate_reductions), candidate_reductions
+)
+adata &lt;- reticulate::r_to_py(anndataR::as_AnnData(
+  r_result$object,
+  assay_name = "RNA",
+  x_mapping = "counts",
+  layers_mapping = FALSE,
+  obs_mapping = c(batch = "batch", bcmp_domain = "bcmp_domain"),
+  obsm_mapping = reduction_mapping,
+  output_class = "ReticulateAnnData"
+))
+</code></pre>
+
+  <h3>Calculate the ranking</h3>
+  <p>Use the BCMP domain labels as the population labels for every candidate reduction.</p>
+  <pre><code>benchmark_module &lt;- reticulate::import("scib_metrics.benchmark", convert = FALSE)
+benchmarker &lt;- benchmark_module$Benchmarker(
+  adata = adata,
+  batch_key = "batch",
+  label_key = "bcmp_domain",
+  embedding_obsm_keys = candidate_reductions,
+  bio_conservation_metrics = NULL,
+  batch_correction_metrics = benchmark_module$BatchCorrection(),
+  n_jobs = 1L,
+  progress_bar = FALSE
+)
+benchmarker$benchmark()</code></pre>
+
+  <pre><code>scores &lt;- reticulate::py_to_r(
+  benchmarker$get_results(min_max_scale = TRUE)
+)
+ranking &lt;- unlist(
+  scores[candidate_reductions, "Batch correction"], use.names = FALSE
+)
+names(ranking) &lt;- candidate_reductions
+ranking &lt;- sort(ranking, decreasing = TRUE)
+names(ranking) &lt;- unname(method_names[names(ranking)])
+print(round(ranking, 2L))</code></pre>
+  <div class="vignette-output"><pre><code>     Harmony         scVI       scANVI   Seurat CCA  Seurat RPCA      fastMNN
+        0.91         0.88         0.88         0.85         0.82         0.77
+      ComBat    Scanorama        LIGER          CSS  Uncorrected
+        0.70         0.65         0.58         0.57         0.22</code></pre></div>
+  <p>A bar plot provides another view of the ranking:</p>
+  <pre><code>ranking_data &lt;- data.frame(
+  method = factor(names(ranking), levels = rev(names(ranking))),
+  score = unname(ranking)
+)
+ggplot(ranking_data, aes(method, score)) +
+  geom_col(fill = "grey55") +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = NULL, y = "scIB batch-correction score")</code></pre>
+  <img class="vignette-figure vignette-figure--ranking" src="assets/vignette-ranking.png?v=20260910-r-scores" data-theme-src-light="assets/vignette-ranking.png?v=20260910-r-scores" data-theme-src-dark="assets/vignette-ranking-dark.png?v=20260910-r-scores" alt="Candidate integration methods ranked by scIB batch-correction score">
+
+  <hr class="dataset-source-divider">
+  <aside role="doc-footnote" id="dataset-source-note" aria-label="Footnote 1: dataset source">
+    <p><sup>1</sup> This bundled example is a downsampled derivative of the <a href="https://www.openproblems.bio/datasets/cellxgene_census-dkd/">Open Problems diabetic kidney dataset</a>. The original study is Wilson PC, et al. Multimodal single cell sequencing implicates chromatin accessibility and genetic background in diabetic kidney disease progression. Nature Communications 13, 5253 (2022). <a href="https://doi.org/10.1038/s41467-022-32972-z">doi:10.1038/s41467-022-32972-z</a>. The source dataset is available under the <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0 license</a>. <a href="#dataset-source-ref" role="doc-backlink" aria-label="Back to footnote reference 1">↩</a></p>
+  </aside>
+
+</main><aside class="manual-aside" aria-label="BCMP package manuals"><img class="manual-aside__logo" src="assets/bcmp-r-light.svg" data-theme-src-light="assets/bcmp-r-light.svg" data-theme-src-dark="assets/bcmp-r-dark.svg" alt="BCMP R package logo"><div class="manual-aside__switcher"><span class="manual-aside__current" aria-current="page">BCMP<sup>R</sup></span><span aria-hidden="true">/</span><a href="method.html#choose-an-implementation">BCMP<sup>Py</sup></a></div><nav class="manual-aside__toc" aria-label="On this page"><strong>☷ On this page</strong><a href="#load-the-example-seurat-object">Load the input</a><a href="#run-bcmp">Run BCMP</a><a href="#rank-candidate-integrations">Rank integration methods</a></nav></aside></div><footer class="footer"><div class="shell">BCMP<sup>R</sup> manual</div></footer>
+</body></html>

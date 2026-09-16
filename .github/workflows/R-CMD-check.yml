@@ -1,0 +1,104 @@
+name: R CMD check
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to validate (all for the complete matrix)
+        type: choice
+        default: all
+        options:
+          - all
+          - ubuntu-24.04
+          - windows-2022
+          - macos-14
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform }}
+  cancel-in-progress: true
+
+env:
+  R_KEEP_PKG_SOURCE: "yes"
+
+jobs:
+  check:
+    name: ${{ matrix.os }} · R 4.5 · full regression
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ inputs.platform == 'all' && fromJSON('["ubuntu-24.04","windows-2022","macos-14"]') || fromJSON(format('["{0}"]', inputs.platform)) }}
+    env:
+      BCMP_REQUIRE_FULL_REGRESSION: "true"
+      _R_CHECK_FORCE_SUGGESTS_: "true"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Prepare isolated output directories
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/bcmp-ci" "$RUNNER_TEMP/bcmp-tmp"
+          printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
+      - name: Set up R
+        uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        with:
+          r-version: "4.5"
+          use-public-rspm: true
+      - name: Set up PDF tools
+        uses: r-lib/actions/setup-tinytex@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+      - name: Install PDF index tool (Windows)
+        if: runner.os == 'Windows'
+        run: tlmgr install makeindex
+      - name: Install current HTML Tidy (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y tidy
+      - name: Install current HTML Tidy (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install tidy-html5
+          echo "$(brew --prefix tidy-html5)/bin" >> "$GITHUB_PATH"
+      - name: Install CI dependencies
+        env:
+          R_KEEP_PKG_SOURCE: "no"
+        uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        with:
+          dependencies: '"all"'
+          cache-version: "full-check-deps-no-source-v1"
+          extra-packages: |
+            any::rcmdcheck
+            any::digest
+      - name: Verify consistent Bioconductor dependency exports
+        run: Rscript .github/scripts/verify-dependencies.R
+      - name: Verify PDF tools before the full check
+        run: Rscript .github/scripts/help.R
+      - name: Check source archive with all four golden paths
+        run: Rscript .github/scripts/check.R
+      - name: Preserve validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: R-CMD-check-${{ matrix.os }}
+          path: |
+            ${{ env.BCMP_CI_OUTPUT }}/*.log
+            ${{ env.BCMP_CI_OUTPUT }}/*.txt
+            ${{ env.BCMP_CI_OUTPUT }}/*.csv
+            ${{ env.BCMP_CI_OUTPUT }}/*.json
+            ${{ env.BCMP_CI_OUTPUT }}/*.xml
+            ${{ env.BCMP_CI_OUTPUT }}/*.pdf
+            ${{ env.BCMP_CI_OUTPUT }}/*.html
+            ${{ env.BCMP_CI_OUTPUT }}/*.tar.gz
+            ${{ env.BCMP_CI_OUTPUT }}/SHA256SUMS
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/00check.log
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/00install.out
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.tex
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.log
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.Rout*
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.pdf
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Method — BCMP R</title><link rel="icon" type="image/png" sizes="32x32" href="assets/bcmp-favicon-32.png"><link rel="stylesheet" href="style.css?v=20260904-sidebar-spacing-v1"><script defer src="theme.js?v=20260823-signature-v3"></script></head>
+<body>
+<header class="topbar"><div class="shell"><div class="identity"><a class="brand" href="index.html">BCMP</a><span class="manual-current">R</span></div><nav class="nav" aria-label="Manual"><a href="index.html">Home</a><a aria-current="page" href="method.html">Method</a><a href="installation.html">Installation</a><a href="api.html">API</a><a href="output.html">Output</a><a href="citation.html">Citation</a><a href="vignette.html">Vignette</a></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode"><span class="theme-toggle__icon" aria-hidden="true">☾</span><span class="theme-toggle__label">Dark</span></button></div></header>
+<div class="manual-layout shell"><main class="prose">
+  <section class="page-heading"><h1>Method</h1><p>Batch-Constraint Manifold Partition (BCMP) derives proxy population labels directly from unintegrated single-cell data geometry. These labels can be used to compare batch-effect removal across candidate integration methods before cell annotations are available.</p></section>
+  <h2 id="how-bcmp-works">How BCMP works</h2>
+  <div class="flow">
+    <div class="step"><b>1</b><strong>Represent the unintegrated manifold</strong><br>Use the PCA representation constructed from raw counts.</div>
+    <div class="step"><b>2</b><strong>Partition at candidate representation scales</strong><br>For each candidate representation scale <code>k</code>, build a cell-cell graph and use community detection to define candidate domains.</div>
+    <div class="step"><b>3</b><strong>Evaluate multi-batch support</strong><br>At each candidate scale, determine whether every evaluated domain has sufficient support from multiple batches.</div>
+    <div class="step"><b>4</b><strong>Select the smallest passing <code>k</code></strong><br>Return the candidate domains from the smallest scale that passes the multi-batch support criterion.</div>
+  </div>
+  <h2 id="choose-an-implementation">Choose an implementation</h2>
+  <p>BCMP is available in Python and R. Choose the package that fits the language and data structure already used in your analysis.</p>
+  <div class="choice-grid">
+    <article class="choice-card choice-card--py">
+      <div class="choice-card__header"><span class="choice-card__logo"><img src="assets/bcmp-python-light.svg" data-theme-src-light="assets/bcmp-python-light.svg" data-theme-src-dark="assets/bcmp-python-dark.svg" alt="BCMP Py package logo"></span><div><h3>BCMP<sup>Py</sup></h3><p>Python package</p></div></div>
+      <p>Use an <code>AnnData</code> object, or supply an existing unintegrated cell-by-dimension embedding matrix.</p>
+      <a class="choice-card__action" href="https://guan-pujun.github.io/bcmp-python/">Open the Python manual</a>
+    </article>
+    <article class="choice-card choice-card--r">
+      <div class="choice-card__header"><span class="choice-card__logo"><img src="assets/bcmp-r-light.svg" data-theme-src-light="assets/bcmp-r-light.svg" data-theme-src-dark="assets/bcmp-r-dark.svg" alt="BCMP R package logo"></span><div><h3>BCMP<sup>R</sup></h3><p>R package</p></div></div>
+      <p>Use a <code>Seurat</code> object, a <code>SingleCellExperiment</code> object, or supply an existing unintegrated cell-by-dimension embedding matrix.</p>
+      <a class="choice-card__action" href="installation.html">Open the R manual</a>
+    </article>
+  </div>
+</main><aside class="manual-aside" aria-label="BCMP package manuals"><img class="manual-aside__logo" src="assets/bcmp-r-light.svg" data-theme-src-light="assets/bcmp-r-light.svg" data-theme-src-dark="assets/bcmp-r-dark.svg" alt="BCMP R package logo"><div class="manual-aside__switcher"><span class="manual-aside__current" aria-current="page">BCMP<sup>R</sup></span><span aria-hidden="true">/</span><a href="method.html#choose-an-implementation">BCMP<sup>Py</sup></a></div><nav class="manual-aside__toc" aria-label="On this page"><strong>☷ On this page</strong><a href="#how-bcmp-works">How BCMP works</a><a href="#choose-an-implementation">Choose an implementation</a></nav></aside></div>
+<footer class="footer"><div class="shell">BCMP<sup>R</sup> manual</div></footer>
+</body></html>

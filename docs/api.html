@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>API — BCMP R</title><link rel="icon" type="image/png" sizes="32x32" href="assets/bcmp-favicon-32.png"><link rel="stylesheet" href="style.css?v=20260904-sidebar-spacing-v1"><script defer src="theme.js?v=20260823-signature-v3"></script></head>
+<body>
+<header class="topbar"><div class="shell"><div class="identity"><a class="brand" href="index.html">BCMP</a><span class="manual-current">R</span></div><nav class="nav" aria-label="Manual"><a href="index.html">Home</a><a href="method.html">Method</a><a href="installation.html">Installation</a><a aria-current="page" href="api.html">API</a><a href="output.html">Output</a><a href="citation.html">Citation</a><a href="vignette.html">Vignette</a></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode"><span class="theme-toggle__icon" aria-hidden="true">☾</span><span class="theme-toggle__label">Dark</span></button></div></header>
+<div class="manual-layout shell"><main class="prose">
+  <section class="page-heading"><h1>API</h1></section>
+  <h2 id="object-workflow">Object workflow</h2>
+  <pre id="bcmp" class="api-signature"><code>bcmp(
+  object,
+  batch_key = "batch",
+  assay = NULL,
+  layer = NULL,
+  partition_n_pcs = 30L,
+  partition_n_hvg = 2000L,
+  k_min = 3L,
+  k_max = NULL,
+  batch_frac_threshold_for_k_max = 0.01,
+  min_batch_coverage = NULL,
+  min_cells_in_domain_per_batch = 5L,
+  max_underrepresentation_fold = 10L,
+  max_residual_cell_frac = 0.05,
+  exclude_cells = NULL,
+  seed = 236L,
+  output_level = "standard",
+  verbose = TRUE
+)</code></pre>
+  <p>Run the complete BCMP workflow from raw counts in a Seurat v5 or SingleCellExperiment object. BCMP selects highly variable genes, normalizes and scales the counts, computes an unintegrated PCA representation, and runs the partition search. The input object is not modified.</p>
+  <table><thead><tr><th>Argument</th><th>Meaning</th></tr></thead><tbody>
+    <tr><td><code>object</code></td><td>(<code>Seurat</code> / <code>SingleCellExperiment</code>) A Seurat object with an <code>Assay5</code> assay, or a SingleCellExperiment object.</td></tr>
+    <tr><td><code>batch_key</code></td><td>(<code>character</code>) Name of the batch metadata column in Seurat or <code>colData</code>.</td></tr>
+    <tr><td><code>assay</code></td><td>(<code>character</code> / <code>NULL</code>) Name of the raw-count assay. <code>NULL</code> uses the default Seurat assay or <code>"counts"</code> for SingleCellExperiment.</td></tr>
+    <tr><td><code>layer</code></td><td>(<code>character</code> / <code>NULL</code>) Name of the Seurat v5 raw-count layer, e.g. <code>"counts"</code>. <code>NULL</code> selects <code>"counts"</code>. For SingleCellExperiment, leave this as <code>NULL</code> and select the raw-count assay with <code>assay</code>.</td></tr>
+    <tr><td><code>partition_n_pcs</code></td><td>(<code>integer</code>) Number of principal components used for BCMP.</td></tr>
+    <tr><td><code>partition_n_hvg</code></td><td>(<code>integer</code>) Number of highly variable genes used for BCMP.</td></tr>
+    <tr><td><code>k_min</code></td><td>(<code>integer</code>) Lower bound of the representation-scale search.</td></tr>
+    <tr><td><code>k_max</code></td><td>(<code>integer</code> / <code>NULL</code>) Optional upper bound. <code>NULL</code> derives it from batch sizes.</td></tr>
+    <tr><td><code>batch_frac_threshold_for_k_max</code></td><td>(<code>numeric</code>) Batches at or below this global cell fraction are ignored during automatic upper-bound derivation.</td></tr>
+    <tr><td><code>min_batch_coverage</code></td><td>(<code>integer</code> / <code>NULL</code>) Minimum number of batches required in each evaluated domain. <code>NULL</code> resolves to <code>max(2, ceiling(n_batches * 0.5))</code>.</td></tr>
+    <tr><td><code>min_cells_in_domain_per_batch</code></td><td>(<code>integer</code>) Minimum effective cells required for a batch to count as represented in a domain.</td></tr>
+    <tr><td><code>max_underrepresentation_fold</code></td><td>(<code>numeric</code>) Maximum allowed fold under-representation relative to global batch proportion.</td></tr>
+    <tr><td><code>max_residual_cell_frac</code></td><td>(<code>numeric</code>) Maximum fraction of active cells that may fall in residual domains excluded from the pass/fail decision.</td></tr>
+    <tr><td><code>exclude_cells</code></td><td>(<code>character</code> / <code>factor</code> / <code>logical</code> / <code>NULL</code>) Cell IDs or a logical mask in object cell order, where <code>TRUE</code> excludes a cell from partitioning. Excluded cells remain in the returned object as <code>Excluded_&lt;batch&gt;</code>.</td></tr>
+    <tr><td><code>seed</code></td><td>(<code>integer</code>) Random seed used by preprocessing, partitioning, and debug UMAP.</td></tr>
+    <tr><td><code>output_level</code></td><td>(<code>character</code>) <code>"standard"</code> (default) or <code>"debug"</code>.</td></tr>
+    <tr><td><code>verbose</code></td><td>(<code>logical</code>) Emit progress records when <code>TRUE</code>.</td></tr>
+  </tbody></table>
+  <h3>Return value</h3>
+  <p>See <a href="output.html">Output</a> for details.</p>
+  <h2 id="embedding-workflow">Embedding workflow</h2>
+  <pre id="bcmp-embedding" class="api-signature"><code>bcmp_embedding(
+  embedding,
+  batch_labels,
+  cell_ids = NULL,
+  k_min = 3L,
+  k_max = NULL,
+  batch_frac_threshold_for_k_max = 0.01,
+  min_batch_coverage = NULL,
+  min_cells_in_domain_per_batch = 5L,
+  max_underrepresentation_fold = 10L,
+  max_residual_cell_frac = 0.05,
+  seed = 236L,
+  output_level = "standard",
+  verbose = TRUE
+)</code></pre>
+  <p>Run BCMP on an existing unintegrated cell-by-dimension embedding and its batch labels.</p>
+  <table><thead><tr><th>Argument</th><th>Meaning</th></tr></thead><tbody>
+    <tr><td><code>embedding</code></td><td>(<code>matrix</code> / <code>sparseMatrix</code>) Numeric matrix or a numeric <code>Matrix::sparseMatrix</code> with stored numeric values (e.g. <code>dgCMatrix</code>, <code>dgRMatrix</code>, or <code>dgTMatrix</code>). Cells are rows and dimensions are columns.</td></tr>
+    <tr><td><code>batch_labels</code></td><td>(<code>vector</code>) One non-missing, non-empty batch label per embedding row.</td></tr>
+    <tr><td><code>cell_ids</code></td><td>(<code>vector</code> / <code>NULL</code>) Unique, non-missing cell IDs. With <code>NULL</code>, IDs are <code>"0"</code> through <code>"n-1"</code>.</td></tr>
+    <tr><td><code>k_min</code></td><td>(<code>integer</code>) Lower bound of the representation-scale search.</td></tr>
+    <tr><td><code>k_max</code></td><td>(<code>integer</code> / <code>NULL</code>) Optional upper bound. <code>NULL</code> derives it from batch sizes.</td></tr>
+    <tr><td><code>batch_frac_threshold_for_k_max</code></td><td>(<code>numeric</code>) Batches at or below this global cell fraction are ignored during automatic upper-bound derivation.</td></tr>
+    <tr><td><code>min_batch_coverage</code></td><td>(<code>integer</code> / <code>NULL</code>) Minimum number of batches required in each evaluated domain. <code>NULL</code> resolves to <code>max(2, ceiling(n_batches * 0.5))</code>.</td></tr>
+    <tr><td><code>min_cells_in_domain_per_batch</code></td><td>(<code>integer</code>) Minimum effective cells required for a batch to count as represented in a domain.</td></tr>
+    <tr><td><code>max_underrepresentation_fold</code></td><td>(<code>numeric</code>) Maximum allowed fold under-representation relative to global batch proportion.</td></tr>
+    <tr><td><code>max_residual_cell_frac</code></td><td>(<code>numeric</code>) Maximum fraction of active cells that may fall in residual domains excluded from the pass/fail decision.</td></tr>
+    <tr><td><code>seed</code></td><td>(<code>integer</code>) Random seed used by partitioning.</td></tr>
+    <tr><td><code>output_level</code></td><td>(<code>character</code>) <code>"standard"</code> (default) or <code>"debug"</code>.</td></tr>
+    <tr><td><code>verbose</code></td><td>(<code>logical</code>) Emit progress records when <code>TRUE</code>.</td></tr>
+  </tbody></table>
+  <h3>Return value</h3>
+  <p>See <a href="output.html">Output</a> for details.</p>
+</main><aside class="manual-aside" aria-label="BCMP package manuals"><img class="manual-aside__logo" src="assets/bcmp-r-light.svg" data-theme-src-light="assets/bcmp-r-light.svg" data-theme-src-dark="assets/bcmp-r-dark.svg" alt="BCMP R package logo"><div class="manual-aside__switcher"><span class="manual-aside__current" aria-current="page">BCMP<sup>R</sup></span><span aria-hidden="true">/</span><a href="method.html#choose-an-implementation">BCMP<sup>Py</sup></a></div><nav class="manual-aside__toc" aria-label="On this page"><strong>☷ On this page</strong><div class="manual-aside__toc-group"><a href="#object-workflow">Object workflow</a><div class="manual-aside__toc-sub"><a href="#bcmp"><code>bcmp()</code></a></div></div><div class="manual-aside__toc-group"><a href="#embedding-workflow">Embedding workflow</a><div class="manual-aside__toc-sub"><a href="#bcmp-embedding"><code>bcmp_embedding()</code></a></div></div></nav></aside></div><footer class="footer"><div class="shell">BCMP<sup>R</sup> manual</div></footer>
+</body></html>

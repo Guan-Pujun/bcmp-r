@@ -1,0 +1,11 @@
+^docs$
+^\.github$
+^\.gitignore$
+^README\.md$
+^LICENSE$
+^.*\.orig$
+^.*\.tar\.gz$
+^.*\.Rcheck$
+^TRASH$
+^CONTRIBUTING\.md$
+^SECURITY\.md$

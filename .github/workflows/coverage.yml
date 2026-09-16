@@ -1,0 +1,100 @@
+name: Coverage
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload the R coverage report to Codecov
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  R_KEEP_PKG_SOURCE: "yes"
+
+jobs:
+  coverage:
+    name: Linux R and C++ coverage baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Prepare isolated output directories
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/bcmp-ci" "$RUNNER_TEMP/bcmp-tmp"
+          printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
+      - name: Verify authorized upload credential
+        if: inputs.upload
+        shell: bash
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -z "$CODECOV_TOKEN" ]; then
+            echo "Configure the R repository Codecov token before requesting upload."
+            exit 1
+          fi
+      - name: Set up R
+        uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        with:
+          r-version: "4.5"
+          use-public-rspm: true
+      - name: Install CI dependencies
+        env:
+          R_KEEP_PKG_SOURCE: "no"
+        uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        with:
+          dependencies: '"all"'
+          cache-version: "coverage-covr-3.6.5-v2"
+          extra-packages: |
+            cran::covr@3.6.5
+            any::xml2
+            any::digest
+      - name: Verify consistent Bioconductor dependency exports
+        run: Rscript .github/scripts/verify-dependencies.R
+      - name: Verify coverage report prerequisites
+        run: Rscript .github/scripts/coverage.R --preflight-only
+      - name: Calculate coverage including full golden regression
+        run: Rscript .github/scripts/coverage.R
+      - name: Upload R coverage
+        if: inputs.upload
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+        with:
+          files: ${{ env.BCMP_CI_OUTPUT }}/coverage.xml
+          disable_search: true
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Preserve validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage
+          path: |
+            ${{ env.BCMP_CI_OUTPUT }}/*.log
+            ${{ env.BCMP_CI_OUTPUT }}/*.txt
+            ${{ env.BCMP_CI_OUTPUT }}/*.csv
+            ${{ env.BCMP_CI_OUTPUT }}/*.json
+            ${{ env.BCMP_CI_OUTPUT }}/*.xml
+            ${{ env.BCMP_CI_OUTPUT }}/*.rds
+            ${{ env.BCMP_CI_OUTPUT }}/*.pdf
+            ${{ env.BCMP_CI_OUTPUT }}/*.html
+            ${{ env.BCMP_CI_OUTPUT }}/*.tar.gz
+            ${{ env.BCMP_CI_OUTPUT }}/SHA256SUMS
+            ${{ env.BCMP_CI_OUTPUT }}/coverage-library/bcmp/bcmp-tests/*.Rout*
+            ${{ env.BCMP_CI_OUTPUT }}/coverage-library/covr_trace_*
+            ${{ env.BCMP_CI_OUTPUT }}/coverage-source/bcmp/src/*.gcno
+            ${{ env.BCMP_CI_OUTPUT }}/coverage-source/bcmp/src/*.gcda
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.log
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.Rout*
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.pdf
+          if-no-files-found: warn
+          retention-days: 14

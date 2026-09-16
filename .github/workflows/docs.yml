@@ -1,0 +1,126 @@
+name: Documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the reviewed static manual to GitHub Pages
+        type: boolean
+        default: false
+  push:
+    branches: ["main"]
+    paths:
+      - "docs/**"
+      - "man/**"
+      - "DESCRIPTION"
+      - "README.md"
+      - ".github/scripts/help.R"
+      - ".github/scripts/common.R"
+      - ".github/scripts/audit.py"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "docs/**"
+      - "man/**"
+      - "DESCRIPTION"
+      - "README.md"
+      - ".github/scripts/help.R"
+      - ".github/scripts/common.R"
+      - ".github/scripts/audit.py"
+      - ".github/workflows/docs.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.deploy || false }}
+  cancel-in-progress: ${{ !inputs.deploy }}
+
+env:
+  R_KEEP_PKG_SOURCE: "yes"
+
+jobs:
+  documentation:
+    name: Static manual and R help
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Prepare isolated output directories
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/bcmp-ci" "$RUNNER_TEMP/bcmp-tmp"
+          printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
+      - name: Set up R
+        uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        with:
+          r-version: "4.5"
+          use-public-rspm: true
+      - name: Set up PDF tools
+        uses: r-lib/actions/setup-tinytex@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+      - name: Install CI dependencies
+        env:
+          R_KEEP_PKG_SOURCE: "no"
+        uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        with:
+          dependencies: '"hard"'
+          cache-version: "docs-deps-no-source-v1"
+          extra-packages: |
+
+      - name: Validate local resources and anchors
+        shell: bash
+        run: python3 .github/scripts/audit.py docs --output "$BCMP_CI_OUTPUT/documentation-audit.json"
+      - name: Check Rd and render package help
+        run: Rscript .github/scripts/help.R
+      - name: Preserve validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: documentation
+          path: |
+            ${{ env.BCMP_CI_OUTPUT }}/*.log
+            ${{ env.BCMP_CI_OUTPUT }}/*.txt
+            ${{ env.BCMP_CI_OUTPUT }}/*.csv
+            ${{ env.BCMP_CI_OUTPUT }}/*.json
+            ${{ env.BCMP_CI_OUTPUT }}/*.xml
+            ${{ env.BCMP_CI_OUTPUT }}/*.pdf
+            ${{ env.BCMP_CI_OUTPUT }}/*.html
+            ${{ env.BCMP_CI_OUTPUT }}/*.tar.gz
+            ${{ env.BCMP_CI_OUTPUT }}/SHA256SUMS
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.log
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.Rout*
+            ${{ env.BCMP_CI_OUTPUT }}/check/**/*.pdf
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload reviewed static manual for Pages
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main' && github.repository == 'Guan-Pujun/bcmp-r' && github.event.repository.visibility == 'public' }}
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: docs
+
+  deploy:
+    name: Deploy reviewed manual
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main' && github.repository == 'Guan-Pujun/bcmp-r' && github.event.repository.visibility == 'public' }}
+    needs: documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

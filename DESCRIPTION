@@ -1,0 +1,24 @@
+Package: bcmp
+Title: Batch-Constraint Manifold Partition for Single-Cell Evaluation
+Version: 0.99.0
+Authors@R:
+    person(given = "Pujun", family = "Guan", email = "guanpujun@163.com",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-7288-9369"))
+Author: Pujun Guan [aut, cre] (ORCID: <https://orcid.org/0000-0002-7288-9369>)
+Maintainer: Pujun Guan <guanpujun@163.com>
+Description: Constructs batch-constrained manifold partitions for evaluating
+    batch-effect removal in single-cell integration workflows. Provides an
+    embedding workflow and Seurat v5 and SingleCellExperiment adapters.
+License: GPL (>= 3)
+URL: https://guan-pujun.github.io/bcmp-r/, https://github.com/Guan-Pujun/bcmp-r
+BugReports: https://github.com/Guan-Pujun/bcmp-r/issues
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Depends: R (>= 4.5.0)
+Imports: methods, Matrix (>= 1.7-4), igraph (>= 2.1.4), leidenbase (>= 0.1.32), RcppAnnoy (>= 0.0.22), Rcpp (>= 1.0.14)
+LinkingTo: Rcpp (>= 1.0.14), RcppParallel (>= 5.1.11-2)
+Suggests: testthat (>= 3.0.0), jsonlite, uwot, SeuratObject (>= 5.0.0),
+    SingleCellExperiment, SummarizedExperiment
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0
