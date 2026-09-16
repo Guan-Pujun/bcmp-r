@@ -1,4 +1,14 @@
 # Shared helpers for isolated CI runs; no package code is sourced from checkout.
+# Limit test workers to two and keep BLAS/OpenMP kernels serial.
+Sys.setenv(
+  RCPP_PARALLEL_NUM_THREADS = "2",
+  OMP_NUM_THREADS = "1",
+  OPENBLAS_NUM_THREADS = "1",
+  MKL_NUM_THREADS = "1",
+  VECLIB_MAXIMUM_THREADS = "1",
+  BLIS_NUM_THREADS = "1"
+)
+
 root <- normalizePath(".", winslash = "/", mustWork = TRUE)
 output <- Sys.getenv("BCMP_CI_OUTPUT")
 if (!nzchar(output)) stop("Set BCMP_CI_OUTPUT to an independent output directory.")

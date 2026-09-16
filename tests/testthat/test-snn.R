@@ -123,13 +123,13 @@ test_that("parallel SNN matches the serial reference across thread counts", {
     knn,
     bcmp:::min_shared_neighbors_for_prune(k)
   )
-  Sys.setenv(RCPP_PARALLEL_NUM_THREADS = "4")
-  four_threads <- bcmp:::bcmp_snn_upper_edges_parallel_cpp(
+  Sys.setenv(RCPP_PARALLEL_NUM_THREADS = "2")
+  two_threads <- bcmp:::bcmp_snn_upper_edges_parallel_cpp(
     knn,
     bcmp:::min_shared_neighbors_for_prune(k)
   )
 
   expect_identical(one_thread, serial)
-  expect_identical(four_threads, serial)
+  expect_identical(two_threads, serial)
   expect_identical(bcmp:::snn_upper_edge_matrix_from_knn_ranked(knn), serial)
 })

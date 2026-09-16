@@ -12,12 +12,20 @@ on:
           - ubuntu-24.04
           - windows-2022
           - macos-14
+      r_version:
+        description: R version to validate
+        type: choice
+        default: release
+        options:
+          - release
+          - devel
+          - "4.5"
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform }}-${{ inputs.r_version }}
   cancel-in-progress: true
 
 env:
@@ -25,7 +33,7 @@ env:
 
 jobs:
   check:
-    name: ${{ matrix.os }} · R 4.5 · full regression
+    name: ${{ matrix.os }} · R ${{ inputs.r_version }} · full regression
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -48,7 +56,7 @@ jobs:
       - name: Set up R
         uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
         with:
-          r-version: "4.5"
+          r-version: ${{ inputs.r_version }}
           use-public-rspm: true
       - name: Set up PDF tools
         uses: r-lib/actions/setup-tinytex@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
@@ -83,7 +91,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: R-CMD-check-${{ matrix.os }}
+          name: R-CMD-check-${{ matrix.os }}-${{ inputs.r_version }}
           path: |
             ${{ env.BCMP_CI_OUTPUT }}/*.log
             ${{ env.BCMP_CI_OUTPUT }}/*.txt
