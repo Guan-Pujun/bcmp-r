@@ -14,6 +14,7 @@
   <br>
   <a href="https://codecov.io/github/Guan-Pujun/bcmp-r"><img src="https://codecov.io/github/Guan-Pujun/bcmp-r/graph/badge.svg?token=YO04KDP79U" alt="Codecov"></a>
   <a href="https://github.com/Guan-Pujun/bcmp-r/actions/workflows/R-CMD-check.yml"><img src="https://github.com/Guan-Pujun/bcmp-r/actions/workflows/R-CMD-check.yml/badge.svg?branch=main" alt="R CMD check"></a>
+  <a href="https://www.bestpractices.dev/projects/14679"><img src="https://www.bestpractices.dev/projects/14679/badge" alt="OpenSSF Best Practices"></a>
 </p>
 
 <br>
