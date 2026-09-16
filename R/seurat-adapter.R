@@ -41,6 +41,15 @@ bcmp_seurat <- function(
   }
   cell_ids <- colnames(object)
   raw_counts <- Matrix::t(SeuratObject::LayerData(object, assay = assay_name, layer = layer_name))
+  layer_cell_ids <- rownames(raw_counts)
+  if (!has_valid_cell_ids(layer_cell_ids, nrow(raw_counts)) ||
+      !setequal(layer_cell_ids, cell_ids)) {
+    stop(
+      "The selected Seurat layer must have unique, non-missing cell names matching all cells in the object.",
+      call. = FALSE
+    )
+  }
+  raw_counts <- raw_counts[match(cell_ids, layer_cell_ids), , drop = FALSE]
   workflow <- run_bcmp_object_workflow(
     raw_counts = raw_counts, batch_labels = metadata[cell_ids, batch_key],
     var_names = colnames(raw_counts), cell_ids = cell_ids, batch_key = batch_key,

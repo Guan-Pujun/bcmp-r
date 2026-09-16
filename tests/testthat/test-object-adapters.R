@@ -35,6 +35,41 @@ test_that("Seurat v5 standard output preserves input and removes BCMP reductions
   expect_named(result$selection, c("selected_k", "n_domains", "mixing_status", "n_evaluated_domains", "n_residual_domains", "n_residual_cells", "residual_cell_frac"))
 })
 
+test_that("Seurat requires complete cell coverage in the selected assay or layer", {
+  bcmp_test_require("SeuratObject")
+  counts <- make_bcmp_adapter_counts()
+  object <- SeuratObject::CreateSeuratObject(counts)
+  object$batch <- rep(c("batch_a", "batch_b"), length.out = ncol(object))
+  subset_counts <- counts[, 5:104, drop = FALSE]
+  object[["SUB"]] <- SeuratObject::CreateAssay5Object(counts = subset_counts)
+  SeuratObject::LayerData(object, assay = "RNA", layer = "counts.subset") <- subset_counts
+  for (target in list(list(assay = "SUB", layer = "counts"),
+                     list(assay = "RNA", layer = "counts.subset"))) {
+    for (excluded in list(NULL, colnames(counts)[1:4], colnames(counts)[101:104])) {
+      expect_error(
+        do.call(bcmp, c(list(object = object, exclude_cells = excluded),
+                       target, bcmp_adapter_args())),
+        "cell names matching all cells in the object", fixed = TRUE
+      )
+    }
+  }
+})
+
+test_that("Seurat accepts a complete alternative assay with reordered input counts", {
+  bcmp_test_require("SeuratObject")
+  counts <- make_bcmp_adapter_counts()
+  object <- SeuratObject::CreateSeuratObject(counts)
+  object$batch <- rep(c("batch_a", "batch_b"), length.out = ncol(object))
+  object[["ALT"]] <- SeuratObject::CreateAssay5Object(
+    counts = counts[, rev(seq_len(ncol(counts))), drop = FALSE]
+  )
+  original <- do.call(bcmp, c(list(object = object), bcmp_adapter_args()))
+  alternative <- do.call(bcmp, c(list(object = object, assay = "ALT"), bcmp_adapter_args()))
+  expect_identical(alternative$object[["bcmp_domain"]], original$object[["bcmp_domain"]])
+  expect_identical(alternative$selection, original$selection)
+  expect_identical(alternative$search_trace, original$search_trace)
+})
+
 test_that("Seurat objects with a legacy Assay receive the supported-version error", {
   bcmp_test_require("SeuratObject")
   assay <- SeuratObject::CreateAssayObject(counts = make_bcmp_adapter_counts())
