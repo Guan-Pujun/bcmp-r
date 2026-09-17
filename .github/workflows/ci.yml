@@ -4,10 +4,11 @@ on:
   workflow_dispatch:
   pull_request:
     branches: ["main"]
-    types: [ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,6 +19,7 @@ env:
 
 jobs:
   tests:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     name: Linux · ${{ matrix.profile }} · ${{ matrix.umap }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -37,17 +39,23 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Determine check scope
+        id: scope
+        uses: ./.github/actions/ci-scope
       - name: Prepare isolated output directories
+        if: steps.scope.outputs.run == 'true'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/bcmp-ci" "$RUNNER_TEMP/bcmp-tmp"
           printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
       - name: Set up R
+        if: steps.scope.outputs.run == 'true'
         uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
         with:
           r-version: "4.5"
           use-public-rspm: true
       - name: Install CI dependencies
+        if: steps.scope.outputs.run == 'true'
         env:
           R_KEEP_PKG_SOURCE: "no"
         uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
@@ -60,13 +68,14 @@ jobs:
             any::digest
             ${{ matrix.packages }}
       - name: Check isolation and run fast tests from the installed tarball
+        if: steps.scope.outputs.run == 'true'
         shell: bash
         env:
           PROFILE: ${{ matrix.profile }}
           UMAP: ${{ matrix.umap }}
         run: Rscript .github/scripts/tests.R "$PROFILE" "$UMAP"
       - name: Preserve validation evidence
-        if: always()
+        if: steps.scope.outputs.run == 'true' && (always())
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: tests-${{ matrix.profile }}-${{ matrix.umap }}
@@ -87,6 +96,7 @@ jobs:
           retention-days: 14
 
   lint:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     name: R static checks
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -95,17 +105,23 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Determine check scope
+        id: scope
+        uses: ./.github/actions/ci-scope
       - name: Prepare isolated output directories
+        if: steps.scope.outputs.run == 'true'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/bcmp-ci" "$RUNNER_TEMP/bcmp-tmp"
           printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
       - name: Set up R
+        if: steps.scope.outputs.run == 'true'
         uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
         with:
           r-version: "4.5"
           use-public-rspm: true
       - name: Install CI dependencies
+        if: steps.scope.outputs.run == 'true'
         env:
           R_KEEP_PKG_SOURCE: "no"
         uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
@@ -118,9 +134,10 @@ jobs:
             any::covr
             any::rcmdcheck
       - name: Lint R sources, tests and CI scripts
+        if: steps.scope.outputs.run == 'true'
         run: Rscript .github/scripts/lint.R
       - name: Preserve validation evidence
-        if: always()
+        if: steps.scope.outputs.run == 'true' && (always())
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: lintr

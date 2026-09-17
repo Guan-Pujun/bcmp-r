@@ -21,11 +21,16 @@ on:
           - devel
           - "4.5"
 
+  pull_request:
+    branches: ["main"]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform }}-${{ inputs.r_version }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform || 'all' }}-${{ inputs.r_version || 'release' }}
   cancel-in-progress: true
 
 env:
@@ -33,13 +38,14 @@ env:
 
 jobs:
   check:
-    name: ${{ matrix.os }} · R ${{ inputs.r_version }} · full regression
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    name: ${{ matrix.os }} · R ${{ inputs.r_version || 'release' }} · full regression
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ inputs.platform == 'all' && fromJSON('["ubuntu-24.04","windows-2022","macos-14"]') || fromJSON(format('["{0}"]', inputs.platform)) }}
+        os: ${{ (inputs.platform || 'all') == 'all' && fromJSON('["ubuntu-24.04","windows-2022","macos-14"]') || fromJSON(format('["{0}"]', inputs.platform)) }}
     env:
       BCMP_REQUIRE_FULL_REGRESSION: "true"
       _R_CHECK_FORCE_SUGGESTS_: "true"
@@ -48,30 +54,37 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Determine check scope
+        id: scope
+        uses: ./.github/actions/ci-scope
       - name: Prepare isolated output directories
+        if: steps.scope.outputs.run == 'true'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/bcmp-ci" "$RUNNER_TEMP/bcmp-tmp"
           printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
       - name: Set up R
+        if: steps.scope.outputs.run == 'true'
         uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
         with:
-          r-version: ${{ inputs.r_version }}
+          r-version: ${{ inputs.r_version || 'release' }}
           use-public-rspm: true
       - name: Set up PDF tools
+        if: steps.scope.outputs.run == 'true'
         uses: r-lib/actions/setup-tinytex@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
       - name: Install PDF index tool (Windows)
-        if: runner.os == 'Windows'
+        if: steps.scope.outputs.run == 'true' && (runner.os == 'Windows')
         run: tlmgr install makeindex
       - name: Install current HTML Tidy (Linux)
-        if: runner.os == 'Linux'
+        if: steps.scope.outputs.run == 'true' && (runner.os == 'Linux')
         run: sudo apt-get update && sudo apt-get install -y tidy
       - name: Install current HTML Tidy (macOS)
-        if: runner.os == 'macOS'
+        if: steps.scope.outputs.run == 'true' && (runner.os == 'macOS')
         run: |
           brew install tidy-html5
           echo "$(brew --prefix tidy-html5)/bin" >> "$GITHUB_PATH"
       - name: Install CI dependencies
+        if: steps.scope.outputs.run == 'true'
         env:
           R_KEEP_PKG_SOURCE: "no"
         uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
@@ -82,16 +95,19 @@ jobs:
             any::rcmdcheck
             any::digest
       - name: Verify consistent Bioconductor dependency exports
+        if: steps.scope.outputs.run == 'true'
         run: Rscript .github/scripts/verify-dependencies.R
       - name: Verify PDF tools before the full check
+        if: steps.scope.outputs.run == 'true'
         run: Rscript .github/scripts/help.R
       - name: Check source archive with all four golden paths
+        if: steps.scope.outputs.run == 'true'
         run: Rscript .github/scripts/check.R
       - name: Preserve validation evidence
-        if: always()
+        if: steps.scope.outputs.run == 'true' && (always())
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: R-CMD-check-${{ matrix.os }}-${{ inputs.r_version }}
+          name: R-CMD-check-${{ matrix.os }}-${{ inputs.r_version || 'release' }}
           path: |
             ${{ env.BCMP_CI_OUTPUT }}/*.log
             ${{ env.BCMP_CI_OUTPUT }}/*.txt

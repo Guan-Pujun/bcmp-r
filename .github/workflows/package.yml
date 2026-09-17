@@ -20,9 +20,11 @@ on:
       - ".github/workflows/package.yml"
   pull_request:
     branches: ["main"]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,6 +35,7 @@ env:
 
 jobs:
   package:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     name: Source archive and clean installation
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -41,17 +44,23 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Determine check scope
+        id: scope
+        uses: ./.github/actions/ci-scope
       - name: Prepare isolated output directories
+        if: steps.scope.outputs.run == 'true'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/bcmp-ci" "$RUNNER_TEMP/bcmp-tmp"
           printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
       - name: Set up R
+        if: steps.scope.outputs.run == 'true'
         uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
         with:
           r-version: "4.5"
           use-public-rspm: true
       - name: Install CI dependencies
+        if: steps.scope.outputs.run == 'true'
         env:
           R_KEEP_PKG_SOURCE: "no"
         uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
@@ -61,12 +70,14 @@ jobs:
           extra-packages: |
             any::digest
       - name: Build and install outside the checkout
+        if: steps.scope.outputs.run == 'true'
         run: Rscript .github/scripts/build.R
       - name: Audit tarball contents
+        if: steps.scope.outputs.run == 'true'
         shell: bash
         run: python3 .github/scripts/audit.py tarball --tarball "$BCMP_CI_OUTPUT"/bcmp_*.tar.gz --output "$BCMP_CI_OUTPUT/tarball-audit.json"
       - name: Preserve validation evidence
-        if: always()
+        if: steps.scope.outputs.run == 'true' && (always())
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: source-package
