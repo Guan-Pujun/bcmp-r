@@ -72,8 +72,8 @@ jobs:
       - name: Set up PDF tools
         if: steps.scope.outputs.run == 'true'
         uses: r-lib/actions/setup-tinytex@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
-      - name: Install PDF index tool (Windows)
-        if: steps.scope.outputs.run == 'true' && (runner.os == 'Windows')
+      - name: Install PDF index tool (Linux and Windows)
+        if: steps.scope.outputs.run == 'true' && (runner.os == 'Linux' || runner.os == 'Windows')
         run: tlmgr install makeindex
       - name: Install current HTML Tidy (Linux)
         if: steps.scope.outputs.run == 'true' && (runner.os == 'Linux')
