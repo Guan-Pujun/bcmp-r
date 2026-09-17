@@ -69,6 +69,25 @@ test_that("fixed KNN validates its direct core inputs", {
 })
 
 
+test_that("KNN rejects magnitudes unsafe for float32 without changing safe inputs", {
+  embedding <- rbind(c(0, 0), c(1, 0), c(0, 2), c(3, 0), c(0, 5))
+  expected <- bcmp:::get_knn_neighbor_once(embedding, k_max = 3L)
+  for (sparse in c(FALSE, TRUE)) {
+    input <- if (sparse) Matrix::Matrix(embedding, sparse = TRUE) else embedding
+    expect_identical(
+      bcmp:::get_knn_neighbor_once(input * 1e10, k_max = 3L), expected
+    )
+    # 1e20 fits float32 but its square does not; 1e40 overflows conversion.
+    for (scale in c(1e20, 1e40)) {
+      expect_error(
+        bcmp_embedding(input * scale, c("a", "b", "a", "b", "a"), k_max = 3L,
+                       verbose = FALSE),
+        "magnitude.*float32"
+      )
+    }
+  }
+})
+
 test_that("sparse embeddings reach Annoy without global densification", {
   embedding <- rbind(
     c(0, 0),

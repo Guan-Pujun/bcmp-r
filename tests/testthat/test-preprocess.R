@@ -63,6 +63,19 @@ test_that("Seurat VST batch consensus matches the frozen Python fixture", {
   expect_identical(observed, expected)
 })
 
+test_that("HVG selection agrees for dense and sparse diagonal batch counts", {
+  counts <- rbind(diag(seq_len(50L)), diag(seq_len(50L)))
+  dimnames(counts) <- list(paste0("cell", seq_len(100L)), paste0("gene", seq_len(50L)))
+  sparse <- methods::as(
+    methods::as(Matrix::Matrix(counts, sparse = TRUE), "generalMatrix"), "CsparseMatrix"
+  )
+  batch <- rep(c("a", "b"), each = 50L)
+  expect_equal(
+    bcmp:::select_highly_variable_genes(counts, batch, colnames(counts), 20L),
+    bcmp:::select_highly_variable_genes(sparse, batch, colnames(counts), 20L)
+  )
+})
+
 test_that("Seurat VST consensus uses frequency, median rank, then feature name", {
   observed <- bcmp:::seurat_v5_consensus_features(
     list(

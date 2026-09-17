@@ -93,10 +93,10 @@ fit_bcmp_vst_loess <- function(log10_means, log10_variances, span = 0.3) {
 
 as_bcmp_csc_count_matrix <- function(counts) {
   counts <- validate_bcmp_count_matrix(counts)
-  if (inherits(counts, "sparseMatrix")) {
-    return(methods::as(methods::as(counts, "generalMatrix"), "CsparseMatrix"))
+  if (!inherits(counts, "sparseMatrix")) {
+    counts <- Matrix::Matrix(as.matrix(counts), sparse = TRUE)
   }
-  Matrix::Matrix(as.matrix(counts), sparse = TRUE)
+  methods::as(methods::as(counts, "generalMatrix"), "CsparseMatrix")
 }
 
 select_hvgs_seurat_v5_vst <- function(raw_counts, var_names, n_top_genes, span = 0.3) {

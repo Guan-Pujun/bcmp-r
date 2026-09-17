@@ -29,6 +29,14 @@ get_knn_neighbor_once <- function(embeddings, k_max, seed = 236L) {
   if (ncol(embeddings) < 1L) {
     stop("'embeddings' must contain at least one dimension.", call. = FALSE)
   }
+  # Annoy uses float32, including squared distances and up to 200 weighted
+  # centroid updates. Bound 4 * dimensions * magnitude^2 * 201 with 4x headroom.
+  float32_max <- (2 - 2^-23) * 2^127
+  max_magnitude <- sqrt(float32_max / (16 * 201 * ncol(embeddings)))
+  if (any(abs(values) > max_magnitude)) {
+    stop("'embeddings' magnitude is too large for safe float32 Annoy computation.",
+         call. = FALSE)
+  }
   if (!is.numeric(k_max) || length(k_max) != 1L || is.na(k_max) ||
       !is.finite(k_max) || k_max != as.integer(k_max)) {
     stop("'k_max' must be one finite integer.", call. = FALSE)
