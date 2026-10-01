@@ -51,7 +51,7 @@ jobs:
       _R_CHECK_FORCE_SUGGESTS_: "true"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Determine check scope
@@ -65,13 +65,13 @@ jobs:
           printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
       - name: Set up R
         if: steps.scope.outputs.run == 'true'
-        uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: ${{ inputs.r_version || 'release' }}
           use-public-rspm: true
       - name: Set up PDF tools
         if: steps.scope.outputs.run == 'true'
-        uses: r-lib/actions/setup-tinytex@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
       - name: Install PDF index tool (Linux and Windows)
         if: steps.scope.outputs.run == 'true' && (runner.os == 'Linux' || runner.os == 'Windows')
         run: tlmgr install makeindex
@@ -87,7 +87,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         env:
           R_KEEP_PKG_SOURCE: "no"
-        uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           dependencies: '"all"'
           cache-version: "full-check-deps-no-source-v1"
@@ -105,7 +105,7 @@ jobs:
         run: Rscript .github/scripts/check.R
       - name: Preserve validation evidence
         if: steps.scope.outputs.run == 'true' && (always())
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: R-CMD-check-${{ matrix.os }}-${{ inputs.r_version || 'release' }}
           path: |

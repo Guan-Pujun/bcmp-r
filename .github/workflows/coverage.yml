@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Prepare isolated output directories
@@ -44,14 +44,14 @@ jobs:
             exit 1
           fi
       - name: Set up R
-        uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: "4.5"
           use-public-rspm: true
       - name: Install CI dependencies
         env:
           R_KEEP_PKG_SOURCE: "no"
-        uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           dependencies: '"all"'
           cache-version: "coverage-covr-3.6.5-v3"
@@ -67,7 +67,7 @@ jobs:
         run: Rscript .github/scripts/coverage.R
       - name: Upload R coverage
         if: inputs.upload
-        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: ${{ env.BCMP_CI_OUTPUT }}/coverage.xml
           disable_search: true
@@ -75,7 +75,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Preserve validation evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage
           path: |
