@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Prepare isolated output directories
@@ -56,16 +56,16 @@ jobs:
           mkdir -p "$RUNNER_TEMP/bcmp-ci" "$RUNNER_TEMP/bcmp-tmp"
           printf '%s\n' "BCMP_CI_OUTPUT=$RUNNER_TEMP/bcmp-ci" "TMPDIR=$RUNNER_TEMP/bcmp-tmp" >> "$GITHUB_ENV"
       - name: Set up R
-        uses: r-lib/actions/setup-r@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: "4.5"
           use-public-rspm: true
       - name: Set up PDF tools
-        uses: r-lib/actions/setup-tinytex@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
       - name: Install CI dependencies
         env:
           R_KEEP_PKG_SOURCE: "no"
-        uses: r-lib/actions/setup-r-dependencies@465b7d8e732ca3921382b1674c59bada9cbf3399 # v2
+        uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           dependencies: '"hard"'
           cache-version: "docs-deps-no-source-v1"
@@ -78,7 +78,7 @@ jobs:
         run: Rscript .github/scripts/help.R
       - name: Preserve validation evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: documentation
           path: |
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload reviewed static manual for Pages
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main' && github.repository == 'Guan-Pujun/bcmp-r' && github.event.repository.visibility == 'public' }}
-        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: docs
 
@@ -120,7 +120,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Configure Pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Deploy to Pages
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
